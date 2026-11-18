@@ -130,28 +130,30 @@ MESSAGES = {
 STAGES = {"intake": stage_intake, "plan": stage_plan}
 
 
-def main() -> int:
-    if len(sys.argv) != 2:
-        raise SystemExit("Usage: python scripts/run_factory.py CR-001")
-    run = ROOT / "runs" / sys.argv[1].upper()
+def advance(run: Path) -> tuple[bool, str]:
+    """Run the next automated stage, if any. Shared by the CLI and the dashboard."""
     state_path = run / "factory-state.json"
     if not state_path.is_file():
-        raise SystemExit(f"Run not found; start it with scripts/start_run.py {run.name}")
+        return False, f"Run not found; start it with scripts/start_run.py {run.name}"
     state = json.loads(state_path.read_text(encoding="utf-8"))
-
     stage = next_stage(run, state)
     if stage not in STAGES:
-        print(f"[{run.name}] {state['status']}: {MESSAGES[stage]}")
-        return 0
+        return True, f"[{run.name}] {state['status']}: {MESSAGES[stage]}"
     print(f"[{run.name}] running stage: {stage} with {GEMINI_MODEL.model} ...", flush=True)
     try:
         STAGES[stage](run, state)
     except Exception as error:  # state is untouched, so re-running resumes this stage
-        print(f"[{run.name}] stage {stage} FAILED, state not advanced: {error}")
-        return 1
+        return False, f"[{run.name}] stage {stage} FAILED, state not advanced: {error}"
     state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
-    print(f"[{run.name}] {state['status']}: {MESSAGES[next_stage(run, state)]}")
-    return 0
+    return True, f"[{run.name}] {state['status']}: {MESSAGES[next_stage(run, state)]}"
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        raise SystemExit("Usage: python scripts/run_factory.py CR-001")
+    ok, message = advance(ROOT / "runs" / sys.argv[1].upper())
+    print(message)
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
