@@ -32,6 +32,12 @@ def test_run_page_shows_requirements_gate_form(client):
     assert "Registrar decisión" in body
 
 
+def test_marks_evidence_to_read_and_new_files(client):
+    body = client.get("/runs/CR-001").text
+    assert "revisar para decidir" in body  # 01-intake-report.md for the requirements gate
+    assert "nuevo" in body  # no decision yet, so every file is new
+
+
 def test_decision_form_records_human_decision(client, run):
     form = {"gate": "requirements", "decision": "APPROVED", "by": "Monserrat", "reason": "ok"}
     response = client.post("/runs/CR-001/decision", data=form, follow_redirects=False)

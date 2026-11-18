@@ -12,6 +12,7 @@ import html
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 
@@ -21,7 +22,12 @@ sys.path.insert(0, str(ROOT))
 from fastapi import FastAPI, Form, HTTPException  # noqa: E402
 from fastapi.responses import HTMLResponse, RedirectResponse  # noqa: E402
 
-from scripts.approve_gate import GATE_ROLES, VALID_DECISIONS, record_decision  # noqa: E402
+from scripts.approve_gate import (  # noqa: E402
+    GATE_ROLES,
+    REQUIRED_EVIDENCE,
+    VALID_DECISIONS,
+    record_decision,
+)
 from scripts.run_factory import STAGES, advance, next_stage  # noqa: E402
 
 RUNS = ROOT / "runs"
@@ -54,6 +60,9 @@ h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:16px; margin:0 0 12px; }
 .APPROVED, .MODIFIED { color:var(--ok); border-color:var(--ok); }
 .REJECTED { color:var(--bad); border-color:var(--bad); }
 .DEFERRED, .PENDING { color:var(--warn); }
+.tag { font-size:12px; border-radius:4px; padding:1px 6px; margin-left:6px; }
+.tag.new { background:var(--accent); color:#fff; }
+.tag.read { border:1px solid var(--warn); color:var(--warn); }
 .msg { border-left:4px solid var(--accent); }
 .msg.error { border-left-color:var(--bad); }
 label { display:block; margin:10px 0 4px; font-weight:600; }
@@ -124,11 +133,22 @@ def run_view(cr: str, msg: str = "", error: bool = False) -> HTMLResponse:
         f"<span class='gate {html.escape(value)}'>{GATE_ROLES[gate]}: {html.escape(value)}</span>"
         for gate, value in state["human_gates"].items()
     )
-    files = "".join(
-        f"<tr><td><a href='/runs/{cr}/files/{quote(p.name)}'>{html.escape(p.name)}</a></td></tr>"
-        for p in sorted(run.iterdir())
-        if p.is_file()
-    )
+    log_entries = state.get("decision_log", [])
+    # "Nuevo" = changed after the last human decision (1 s margin: the decision's own files).
+    since = 0.0
+    if log_entries:
+        since = datetime.fromisoformat(log_entries[-1]["recorded_at"]).timestamp() + 1
+    waiting = WAITING_GATE.get(stage)
+    must_read = set(REQUIRED_EVIDENCE[waiting]) if waiting else set()
+
+    def file_row(p: Path) -> str:
+        tags = "<span class='tag new'>nuevo</span>" if p.stat().st_mtime > since else ""
+        if p.name in must_read:
+            tags += "<span class='tag read'>revisar para decidir</span>"
+        link = f"<a href='/runs/{cr}/files/{quote(p.name)}'>{html.escape(p.name)}</a>"
+        return f"<tr><td>{link} {tags}</td></tr>"
+
+    files = "".join(file_row(p) for p in sorted(run.iterdir()) if p.is_file())
 
     action = ""
     if stage in STAGES:
@@ -147,7 +167,12 @@ def run_view(cr: str, msg: str = "", error: bool = False) -> HTMLResponse:
         team = "".join(f"<option value='{name}'>" for name in TEAM)
         action = (
             f"<div class='card'><h2>⛔ Decisión humana: {GATE_ROLES[gate]} ({gate})</h2>"
-            f"<p class='muted'>La fábrica está detenida. Lee la evidencia antes de decidir.</p>"
+            f"<p class='muted'>La fábrica está detenida. Lee antes de decidir: "
+            + ", ".join(
+                f"<a href='/runs/{cr}/files/{quote(name)}'>{name}</a>"
+                for name in REQUIRED_EVIDENCE[gate]
+            )
+            + "</p>"
             f"<form method='post' action='/runs/{cr}/decision' onsubmit='busy(this)'>"
             f"<input type='hidden' name='gate' value='{gate}'>"
             f"<label for='by'>Nombre</label>"
@@ -168,7 +193,7 @@ def run_view(cr: str, msg: str = "", error: bool = False) -> HTMLResponse:
         f"{html.escape(d['decision'])}</span></td>"
         f"<td>{html.escape(d['recorded_by'])} ({html.escape(d['role'])})</td>"
         f"<td>{html.escape(d['reason'])}</td></tr>"
-        for d in state.get("decision_log", [])
+        for d in log_entries
     )
     log_card = (
         f"<div class='card'><h2>Historial de decisiones</h2><table>"
