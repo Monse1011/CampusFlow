@@ -1,0 +1,9 @@
+{
+  "change_id": "CR-001",
+  "gate": "requirements",
+  "decision": "MODIFIED",
+  "reason": "Acepto el intake. CR-001 cambia AC-03.3 intencionalmente (lleno -> WAITLISTED en vez de rechazo).\r\nReglas: (1) API responde 201 con status ACTIVE o WAITLISTED; ya no 409 por capacidad.\r\n(2) Un usuario WAITLISTED puede cancelar; eso no promueve a nadie.\r\n(3) Waitlist sin l\u00edmite.\r\nFuera de alcance: duplicados (CR-003) y promoci\u00f3n al cambiar capacidad.",
+  "recorded_by": "Monserrat",
+  "role": "Product Owner",
+  "recorded_at": "2026-11-18T22:11:24.770660+00:00"
+}

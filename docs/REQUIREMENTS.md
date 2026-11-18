@@ -16,15 +16,21 @@ A user can register while capacity is available.
 
 - AC-03.1: unknown event is rejected.
 - AC-03.2: available capacity -> registration accepted.
-- AC-03.3: full capacity -> baseline rejects registration.
+- AC-03.3: full capacity -> registration is stored as `WAITLISTED` (FIFO), not rejected.
+  The API answers `201` with status `ACTIVE` or `WAITLISTED`; capacity no longer returns `409`.
+  The waitlist has no limit.
 
-CR-001 intentionally changes AC-03.3 by introducing a waitlist.
+> AC-03.3 changed by CR-001 (waitlist). Previous text: "full capacity -> baseline rejects
+> registration." Approved by the Product Owner (Monserrat, 2026-11-18):
+> `runs/CR-001/human-requirements-decision.json`.
 
 ## FR-04 — Cancellation
 A registered user can cancel an existing registration.
 
 - AC-04.1: existing registration is removed.
 - AC-04.2: missing registration is reported clearly.
+- AC-04.3 (CR-001): cancelling an `ACTIVE` registration promotes the first `WAITLISTED` user.
+  Cancelling a `WAITLISTED` registration promotes no one.
 
 ## NFR-01 — Architecture
 Business rules live in Service. Dependency direction: `API -> Service -> Repository`.

@@ -64,5 +64,59 @@
         }
       }
     ]
+  },
+  {
+    "agent": "PlannerAgent",
+    "model": "gemini-3-flash-preview",
+    "tool_calls": [
+      {
+        "tool": "list_repo_files",
+        "args": {
+          "prefix": "campusflow/"
+        }
+      },
+      {
+        "tool": "list_repo_files",
+        "args": {
+          "prefix": "tests/"
+        }
+      },
+      {
+        "tool": "read_repo_file",
+        "args": {
+          "relative_path": "campusflow/domain.py"
+        }
+      },
+      {
+        "tool": "read_repo_file",
+        "args": {
+          "relative_path": "campusflow/repository.py"
+        }
+      },
+      {
+        "tool": "read_repo_file",
+        "args": {
+          "relative_path": "campusflow/service.py"
+        }
+      },
+      {
+        "tool": "read_repo_file",
+        "args": {
+          "relative_path": "campusflow/errors.py"
+        }
+      },
+      {
+        "tool": "read_repo_file",
+        "args": {
+          "relative_path": "campusflow/api.py"
+        }
+      },
+      {
+        "tool": "read_repo_file",
+        "args": {
+          "relative_path": "tests/product/test_service.py"
+        }
+      }
+    ]
   }
 ]
