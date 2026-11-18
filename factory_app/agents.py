@@ -1,3 +1,5 @@
+import os
+
 from google.adk.agents.llm_agent import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.genai import types
@@ -15,8 +17,9 @@ from .tools import list_repo_files, read_repo_file, run_baseline_verification, w
 
 # Free Tier returns 429/503 under load: exponential backoff instead of failing the run,
 # and a per-request timeout so an overloaded model fails visibly (worst case ~5 min).
+# FACTORY_MODEL switches model without code changes when the reference model is overloaded.
 GEMINI_MODEL = Gemini(
-    model="gemini-3.8-flash",
+    model=os.environ.get("FACTORY_MODEL", "gemini-3.8-flash"),
     retry_options=types.HttpRetryOptions(
         attempts=4, initial_delay=5, max_delay=60, http_status_codes=[429, 500, 503, 504]
     ),

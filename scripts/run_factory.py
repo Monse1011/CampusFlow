@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import sys
 from pathlib import Path
@@ -16,10 +17,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(ROOT / ".env")  # before importing agents: FACTORY_MODEL is read at import time
+
 from google.adk.runners import InMemoryRunner  # noqa: E402
 from google.genai import types  # noqa: E402
 
-from factory_app.agents import intake_agent, planner_agent  # noqa: E402
+from factory_app.agents import GEMINI_MODEL, intake_agent, planner_agent  # noqa: E402
+
+# ADK logs a full traceback on model errors; main() already reports the failure in one line.
+logging.getLogger("google_adk").setLevel(logging.CRITICAL)
 
 PASSED = {"APPROVED", "MODIFIED"}
 RECOMMENDATION = re.compile(r"RECOMMENDATION:\s*(PROCEED|HUMAN_CLARIFICATION_REQUIRED)")
@@ -75,7 +82,7 @@ def change_request_block(run: Path) -> str:
 def save_trace(run: Path, agent_name: str, calls: list[dict]) -> None:
     path = run / "context-trace.json"
     trace = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
-    trace.append({"agent": agent_name, "tool_calls": calls})
+    trace.append({"agent": agent_name, "model": GEMINI_MODEL.model, "tool_calls": calls})
     path.write_text(json.dumps(trace, indent=2), encoding="utf-8")
 
 
@@ -126,7 +133,6 @@ STAGES = {"intake": stage_intake, "plan": stage_plan}
 def main() -> int:
     if len(sys.argv) != 2:
         raise SystemExit("Usage: python scripts/run_factory.py CR-001")
-    load_dotenv(ROOT / ".env")
     run = ROOT / "runs" / sys.argv[1].upper()
     state_path = run / "factory-state.json"
     if not state_path.is_file():
@@ -137,7 +143,7 @@ def main() -> int:
     if stage not in STAGES:
         print(f"[{run.name}] {state['status']}: {MESSAGES[stage]}")
         return 0
-    print(f"[{run.name}] running stage: {stage} ...", flush=True)
+    print(f"[{run.name}] running stage: {stage} with {GEMINI_MODEL.model} ...", flush=True)
     try:
         STAGES[stage](run, state)
     except Exception as error:  # state is untouched, so re-running resumes this stage

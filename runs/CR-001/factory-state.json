@@ -1,7 +1,7 @@
 {
   "change_id": "CR-001",
   "created_at": "2026-11-18T21:02:41.220223+00:00",
-  "status": "INTAKE_PENDING",
+  "status": "AWAITING_REQUIREMENTS_DECISION",
   "human_gates": {
     "requirements": "PENDING",
     "plan": "PENDING",
@@ -11,5 +11,6 @@
   "verification": "NOT_RUN",
   "review": "NOT_RUN",
   "security": "NOT_RUN",
-  "iterations": 0
+  "iterations": 0,
+  "intake": "PROCEED"
 }
