@@ -18,6 +18,11 @@ Turn the active Change Request into a bounded intake report.
 Identify requested outcome, relevant requirements/AC, ambiguity/conflict,
 likely repository areas, and recommend PROCEED or HUMAN_CLARIFICATION_REQUIRED.
 Do not design the implementation. Do not modify files.
+Start from docs/REPO_MAP.md and read only the files you need; do not read everything.
+End the report with exactly one line:
+RECOMMENDATION: PROCEED
+or
+RECOMMENDATION: HUMAN_CLARIFICATION_REQUIRED
 """
 
 PLANNER_INSTRUCTION = COMMON_RULES + """
@@ -25,6 +30,8 @@ ROLE: Planner Agent (read-only).
 Use the intake report and repository context to propose an implementation plan.
 Include scope, requirements/AC, likely files, tests, architecture constraints,
 security considerations, verification commands, assumptions/open questions.
+Split the work into TASK-01, TASK-02, ... and map each task to the AC it satisfies.
+Read only the files you need. If a human rejected a previous plan, address that reason.
 If ambiguity remains, STOP and request human clarification. Do not write code.
 """
 

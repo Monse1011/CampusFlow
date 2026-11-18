@@ -1,4 +1,6 @@
 from google.adk.agents.llm_agent import LlmAgent
+from google.adk.models.google_llm import Gemini
+from google.genai import types
 
 from .prompts import (
     CODER_INSTRUCTION,
@@ -11,7 +13,15 @@ from .prompts import (
 )
 from .tools import list_repo_files, read_repo_file, run_baseline_verification, write_run_evidence
 
-GEMINI_MODEL = "gemini-3.8-flash"
+# Free Tier returns 429/503 under load: exponential backoff instead of failing the run,
+# and a per-request timeout so an overloaded model fails visibly (worst case ~5 min).
+GEMINI_MODEL = Gemini(
+    model="gemini-3.8-flash",
+    retry_options=types.HttpRetryOptions(
+        attempts=4, initial_delay=5, max_delay=60, http_status_codes=[429, 500, 503, 504]
+    ),
+    client_kwargs={"http_options": types.HttpOptions(timeout=60_000)},
+)
 READ_TOOLS = [list_repo_files, read_repo_file]
 
 intake_agent = LlmAgent(
